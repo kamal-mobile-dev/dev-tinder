@@ -1,0 +1,3 @@
+- what are dependencies
+- what is the use of "-g" while npm install
+- difference between caret and tilde (^ vs ~)
