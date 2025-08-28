@@ -1,3 +1,4 @@
 - what are dependencies
 - what is the use of "-g" while npm install
 - difference between caret and tilde (^ vs ~)
+- what are diffrence b/w package.json vs package-lock.json, package-lock.json should it push over github.
