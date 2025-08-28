@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+var validator = require('validator');
 
 const userSchema = new mongoose.Schema(
   {
@@ -18,10 +19,7 @@ const userSchema = new mongoose.Schema(
       lowercase: true,
       trim: true,
       validate(value) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(value)) {
-          throw new Error('Invalid email format');
-        }
+        if (!validator.isEmail(value)) throw new Error('Invalid Email ' + value);
       }
     },
     password: {
@@ -45,7 +43,21 @@ const userSchema = new mongoose.Schema(
       default: 'This is test'
     },
     skills: {
-      type: [String]
+      type: [String],
+      validate: [
+        {
+          validator: function (skills) {
+            return skills.length <= 5; // max 5 skills
+          },
+          message: 'You can only add up to 5 skills.'
+        },
+        {
+          validator: function (skills) {
+            return new Set(skills.map((skill) => skill.toLowerCase())).size === skills.length;
+          },
+          message: 'Duplicate skills are not allowed.'
+        }
+      ]
     }
   },
   { timestamps: true }
