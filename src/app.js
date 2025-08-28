@@ -1,12 +1,22 @@
 const express = require('express');
 const mongoose = require('mongoose');
+const { adminAuth } = require('./middlewares/auth.js');
 const { connectDB } = require('./config/database.js');
+var cookieParser = require('cookie-parser');
 const User = require('./models/user.js');
+const { validateSignupData } = require('./utils/validation.js');
+const bcrypt = require('bcrypt');
+var jwt = require('jsonwebtoken');
+
+const JWT_SECRET = 'DDQk3uZcqisBQ5xU@#$WwmKySaCls9rTYfQ7%$#';
+
+const saltRounds = 10;
 
 const app = express();
 
 // Middleware
 app.use(express.json());
+app.use(cookieParser());
 
 // Utility function for standardized responses
 const sendResponse = (res, statusCode, status, message, data = null) => {
@@ -16,13 +26,48 @@ const sendResponse = (res, statusCode, status, message, data = null) => {
 // ========================= SIGNUP API =========================
 app.post('/signup', async (req, res) => {
   try {
-    const user = new User(req.body);
+    // validateSignupData(req);
+
+    const { firstName, lastName, emailId, password } = req.body;
+
+    const hashPassword = await bcrypt.hash(password, saltRounds);
+    console.log('hashPassword ', hashPassword);
+
+    const user = new User({ firstName, lastName, emailId, password: hashPassword });
+
     await user.save();
     sendResponse(res, 201, 'success', 'User created successfully', user);
   } catch (err) {
     if (err.code === 11000) {
       return sendResponse(res, 400, 'failed', `Email '${req.body.emailId}' is already registered`);
     }
+    sendResponse(res, 500, 'failed', 'Something went wrong', err.message);
+  }
+});
+
+// ========================= SIGNUP API =========================
+app.post('/login', async (req, res) => {
+  try {
+    // validateSignupData(req);
+
+    const { emailId, password } = req.body;
+
+    const user = await User.findOne({ emailId });
+
+    if (!user) {
+      sendResponse(res, 404, 'failed', 'incorrect credential ');
+    }
+
+    const isValidPassword = bcrypt.compareSync(password, user.password);
+
+    if (isValidPassword) {
+      let token = jwt.sign({ emailId: user.emailId, id: user.id }, JWT_SECRET, {
+        expiresIn: '1d' // expires in 24 hours
+      });
+      res.cookie('token', token);
+      sendResponse(res, 201, 'success', 'User login successfully', { userId: user.id });
+    } else sendResponse(res, 404, 'failed', 'incorrect credential');
+  } catch (err) {
     sendResponse(res, 500, 'failed', 'Something went wrong', err.message);
   }
 });
@@ -109,6 +154,25 @@ app.get('/users', async (req, res) => {
     sendResponse(res, 200, 'success', 'Users fetched successfully', users);
   } catch (error) {
     console.error('Error fetching users:', error);
+    sendResponse(res, 500, 'failed', 'Internal server error');
+  }
+});
+
+// ========================= GET USER =========================
+app.get('/profile', adminAuth, async (req, res) => {
+  try {
+    sendResponse(res, 200, 'success', 'Users fetched successfully', req.user);
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    sendResponse(res, 500, 'failed', 'Internal server error');
+  }
+});
+
+// ========================= Send Connection Request =========================
+app.post('/sendConnectionRequest', adminAuth, async (req, res) => {
+  try {
+    sendResponse(res, 200, 'success', 'request send successfuly', req.user);
+  } catch (error) {
     sendResponse(res, 500, 'failed', 'Internal server error');
   }
 });
