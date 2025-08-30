@@ -1,4 +1,5 @@
 var validator = require('validator');
+const { sendResponse } = require('../utils/helper.js');
 
 const validateSignupData = (req) => {
   const { firstName, lastName, emailId, password } = req.body;
@@ -37,4 +38,38 @@ const validateSignupData = (req) => {
   }
 };
 
-module.exports = { validateSignupData };
+const validateEditProfileData = (req, res) => {
+  const AllowedEditFields = [
+    'photoUrl',
+    'skills',
+    'age',
+    'gender',
+    'firstName',
+    'lastName',
+    'emailId',
+    'about'
+  ];
+  const isEditAllowed = Object.keys(req.body).every((item) => AllowedEditFields.includes(item));
+
+  if (!isEditAllowed) {
+    sendResponse(res, 500, 'failed', 'Invalid Edit Request');
+  }
+
+  const { photoUrl, skills, age, gender } = req.body;
+  console.log(age);
+  if (photoUrl && !validator.isURL(photoUrl)) {
+    sendResponse(res, 500, 'failed', 'Please supply valid photo url');
+  }
+
+  if (skills && skills.length > 5) {
+    sendResponse(res, 500, 'failed', 'Please skills length must be less than or equal 5');
+  }
+  if (age === 0 || (age && age < 18)) {
+    sendResponse(res, 500, 'failed', 'Please age must be above 18');
+  }
+  if (gender && !['male', 'female'].includes(gender)) {
+    sendResponse(res, 500, 'failed', 'Please gender must be male or female ');
+  }
+};
+
+module.exports = { validateSignupData, validateEditProfileData };
